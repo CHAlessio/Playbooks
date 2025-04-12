@@ -7,13 +7,17 @@
     splunk_server_ip: "172.16.2.80"
     splunk_server_port: 9997
     splunk_admin_user: admin
-    splunk_admin_password: "caCQW68tWwHsHQ6/uC6RNQ=="
+    splunk_admin_password: "{{ lookup('env', 'SPLUNK_PASSWORD') }}"
     splunk_install_dir: /opt
     splunk_home: "{{ splunk_install_dir }}/splunkforwarder"
     splunk_filename: "splunkforwarder-{{ forwarder_version }}-{{ forwarder_build }}-Linux-x86_64.tgz"
     splunk_url: "https://download.splunk.com/products/universalforwarder/releases/{{ forwarder_version }}/linux/{{ splunk_filename }}"
 
   tasks:
+    - name: Ensure password env var is set
+      fail:
+        msg: "Environment variable SPLUNK_PASSWORD is not set!"
+      when: splunk_admin_password == ""
 
     - name: Download Splunk Forwarder
       get_url:
@@ -35,7 +39,7 @@
     - name: Enable Splunk Forwarder to start on boot
       command: "{{ splunk_home }}/bin/splunk enable boot-start"
 
-    - name: Set admin password (if not already configured)
+    - name: Set admin password (if needed)
       command: >
         {{ splunk_home }}/bin/splunk edit user {{ splunk_admin_user }}
         -password '{{ splunk_admin_password }}'
@@ -48,7 +52,7 @@
         {{ splunk_home }}/bin/splunk add forward-server {{ splunk_server_ip }}:{{ splunk_server_port }}
         -auth {{ splunk_admin_user }}:{{ splunk_admin_password }}
 
-    - name: Monitor system logs (optional, customize as needed)
+    - name: Monitor system logs
       command: >
         {{ splunk_home }}/bin/splunk add monitor /var/log
         -auth {{ splunk_admin_user }}:{{ splunk_admin_password }}
