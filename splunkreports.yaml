@@ -6,6 +6,7 @@
   vars:
     splunk_forwarder_url: "https://download.splunk.com/products/universalforwarder/releases/9.1.2/linux/splunkforwarder-9.1.2-b6b9c8185839-linux-2.6-amd64.deb"
     splunk_deb: "/tmp/splunkforwarder.deb"
+    splunk_admin_user: "alessio@binz.family"
     splunk_admin_password: "Jegi2012*"
     splunk_bin_path: "/opt/splunkforwarder/bin/splunk"
     inputs_conf: "/opt/splunkforwarder/etc/system/local/inputs.conf"
@@ -64,12 +65,12 @@
       when: not splunk_bin.stat.exists
 
     - name: Add monitor for all logs in /var/log
-      command: "{{ splunk_bin_path }} add monitor /var/log -auth alessio@binz.family:'{{ splunk_admin_password }}'"
+      command: "{{ splunk_bin_path }} add monitor /var/log -auth '{{ splunk_admin_user }}:{{ splunk_admin_password }}'"
       no_log: true
       when: not splunk_inputs_conf.stat.exists
 
     - name: Configure forward-server
-      command: "{{ splunk_bin_path }} add forward-server 172.16.2.80:9997 -auth alessio@binz.family:'{{ splunk_admin_password }}'"
+      command: "{{ splunk_bin_path }} add forward-server 172.16.2.80:9997 -auth '{{ splunk_admin_user }}:{{ splunk_admin_password }}'"
       no_log: true
       when: not splunk_outputs_conf.stat.exists
 
