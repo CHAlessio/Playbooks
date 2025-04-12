@@ -1,6 +1,6 @@
 ---
 - name: Update and upgrade Ubuntu system
-  hosts: ubuntu  # Hosts-Gruppe für Ubuntu, die in Semaphore definiert ist
+  hosts: ubuntu  # Hosts-Gruppe für Ubuntu, die du in Semaphore hast
   become: yes     # Erforderlich, um sudo-Rechte zu verwenden
   tasks:
 
@@ -33,5 +33,4 @@
     - name: Fail the play if upgrade fails
       fail:
         msg: "APT upgrade failed!"
-      when: apt_upgrade_result.rc != 0  # Prüft den Rückgabewert des Upgrades
-
+      when: apt_upgrade_result.failed  # Überprüft, ob die Aufgabe fehlgeschlagen ist
