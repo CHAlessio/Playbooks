@@ -65,6 +65,7 @@
     - name: Monitor system logs
       command: >
         {{ splunk_home }}/bin/splunk add monitor /var/log
+        -index debian_logs
         -auth {{ splunk_admin_user }}:{{ splunk_admin_password }}
 
     - name: Restart Splunk Forwarder
