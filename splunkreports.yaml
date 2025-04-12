@@ -10,14 +10,14 @@
 
   tasks:
 
-    - name: Install required packages
+    - name: Ensure wget is installed
       apt:
         name: wget
         state: present
         update_cache: yes
 
     - name: Download Splunk Forwarder using wget
-      ansible.builtin.shell: "wget -O {{ splunk_deb }} {{ splunk_forwarder_url }}"
+      shell: "wget -O {{ splunk_deb }} {{ splunk_forwarder_url }}"
       args:
         creates: "{{ splunk_deb }}"
 
