@@ -55,7 +55,7 @@
       when: forwarder_service_file.stat.exists
 
     - name: Enable Splunk Forwarder to start on boot (as root)
-      command: "{{ splunk_home }}/bin/splunk enable boot-start -user root"
+      command: "{{ splunk_home }}/bin/splunk enable boot-start --accept-license -user root"
 
     - name: Add Splunk Server as Forward Target
       command: >
