@@ -16,11 +16,10 @@
         state: present
         update_cache: yes
 
-    - name: Download Splunk Universal Forwarder
-      get_url:
-        url: "{{ splunk_forwarder_url }}"
-        dest: "{{ splunk_deb }}"
-        mode: '0644'
+    - name: Download Splunk Forwarder using wget
+      ansible.builtin.shell: "wget -O {{ splunk_deb }} {{ splunk_forwarder_url }}"
+      args:
+        creates: "{{ splunk_deb }}"
 
     - name: Install Splunk Universal Forwarder
       apt:
