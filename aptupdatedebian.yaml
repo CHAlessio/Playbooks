@@ -1,0 +1,36 @@
+---
+- name: Update and upgrade Debian system
+  hosts: debian  # Hosts-Gruppe für Debian, die du in Semaphore hast
+  become: yes     # Erforderlich, um sudo-Rechte zu verwenden
+  tasks:
+
+    # Schritt 1: Aktualisiere die Paket-Cache-Datenbank
+    - name: Update apt package cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600  # Caches für eine Stunde (optional)
+      register: apt_update_result  # Speichert das Ergebnis der Cache-Aktualisierung
+    
+    # Debugging: Zeigt das Ergebnis der Cache-Aktualisierung an
+    - name: Debug apt update result
+      debug:
+        var: apt_update_result
+
+    # Schritt 2: Aktualisiere alle Pakete
+    - name: Upgrade all packages
+      apt:
+        upgrade: dist     # Führt das Distribution-Upgrade durch (inkl. Kernel-Updates)
+        autoremove: yes    # Entfernt nicht mehr benötigte Pakete
+        autoclean: yes     # Bereinigt ungenutzte Paketdateien
+      register: apt_upgrade_result  # Speichert das Ergebnis der Paketaktualisierung
+
+    # Debugging: Zeigt das Ergebnis des Upgrades an
+    - name: Debug apt upgrade result
+      debug:
+        var: apt_upgrade_result
+
+    # Schritt 3: Fehlerbehandlung: Wenn das Upgrade fehlschlägt, gibt es eine klare Fehlermeldung
+    - name: Fail the play if upgrade fails
+      fail:
+        msg: "APT upgrade failed!"
+      when: apt_upgrade_result.failed  # Überprüft, ob die Aufgabe fehlgeschlagen ist
