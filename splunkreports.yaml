@@ -27,11 +27,6 @@
         path: "{{ outputs_conf }}"
       register: splunk_outputs_conf
 
-    - name: Fail if SPLUNK_PASSWORD is not set
-      fail:
-        msg: "The SPLUNK_PASSWORD variable must be set as a secret or environment variable!"
-      when: splunk_admin_password | length == 0
-
   tasks:
     - name: Ensure wget is installed
       apt:
@@ -61,8 +56,7 @@
       command: "{{ splunk_bin_path }} start --accept-license --answer-yes --no-prompt --seed-passwd '{{ splunk_admin_password }}'"
       args:
         creates: /opt/splunkforwarder/etc/passwd
-      environment:
-        SPLUNK_PASSWORD: "{{ splunk_admin_password }}"
+      no_log: true
       when: not splunk_bin.stat.exists
 
     - name: Enable boot-start for splunk user
@@ -70,15 +64,13 @@
       when: not splunk_bin.stat.exists
 
     - name: Add monitor for all logs in /var/log
-      command: "{{ splunk_bin_path }} add monitor /var/log -auth admin:'{{ splunk_admin_password }}'"
-      environment:
-        SPLUNK_PASSWORD: "{{ splunk_admin_password }}"
+      command: "{{ splunk_bin_path }} add monitor /var/log -auth alessio@binz.family:'{{ splunk_admin_password }}'"
+      no_log: true
       when: not splunk_inputs_conf.stat.exists
 
     - name: Configure forward-server
-      command: "{{ splunk_bin_path }} add forward-server 172.16.2.80:9997 -auth admin:'{{ splunk_admin_password }}'"
-      environment:
-        SPLUNK_PASSWORD: "{{ splunk_admin_password }}"
+      command: "{{ splunk_bin_path }} add forward-server 172.16.2.80:9997 -auth alessio@binz.family:'{{ splunk_admin_password }}'"
+      no_log: true
       when: not splunk_outputs_conf.stat.exists
 
     - name: Restart Splunk Forwarder via systemd
