@@ -1,0 +1,57 @@
+- name: Install and configure Splunk Universal Forwarder
+  hosts: agents
+  become: yes
+  vars:
+    forwarder_version: "9.4.1"
+    forwarder_build: "e3bdab203ac8"
+    splunk_server_ip: "172.16.2.80"
+    splunk_server_port: 9997
+    splunk_admin_user: admin
+    splunk_admin_password: "caCQW68tWwHsHQ6/uC6RNQ=="
+    splunk_install_dir: /opt
+    splunk_home: "{{ splunk_install_dir }}/splunkforwarder"
+    splunk_filename: "splunkforwarder-{{ forwarder_version }}-{{ forwarder_build }}-Linux-x86_64.tgz"
+    splunk_url: "https://download.splunk.com/products/universalforwarder/releases/{{ forwarder_version }}/linux/{{ splunk_filename }}"
+
+  tasks:
+
+    - name: Download Splunk Forwarder
+      get_url:
+        url: "{{ splunk_url }}"
+        dest: "/tmp/{{ splunk_filename }}"
+        mode: '0644'
+
+    - name: Extract Splunk Forwarder
+      unarchive:
+        src: "/tmp/{{ splunk_filename }}"
+        dest: "{{ splunk_install_dir }}"
+        remote_src: yes
+
+    - name: Accept license and start Splunk Forwarder
+      command: "{{ splunk_home }}/bin/splunk start --accept-license --answer-yes"
+      args:
+        creates: "{{ splunk_home }}/ftr"
+
+    - name: Enable Splunk Forwarder to start on boot
+      command: "{{ splunk_home }}/bin/splunk enable boot-start"
+
+    - name: Set admin password (if not already configured)
+      command: >
+        {{ splunk_home }}/bin/splunk edit user {{ splunk_admin_user }}
+        -password '{{ splunk_admin_password }}'
+        -role admin
+        -auth admin:changeme
+      ignore_errors: yes
+
+    - name: Add Splunk Server as Forward Target
+      command: >
+        {{ splunk_home }}/bin/splunk add forward-server {{ splunk_server_ip }}:{{ splunk_server_port }}
+        -auth {{ splunk_admin_user }}:{{ splunk_admin_password }}
+
+    - name: Monitor system logs (optional, customize as needed)
+      command: >
+        {{ splunk_home }}/bin/splunk add monitor /var/log
+        -auth {{ splunk_admin_user }}:{{ splunk_admin_password }}
+
+    - name: Restart Splunk Forwarder
+      command: "{{ splunk_home }}/bin/splunk restart"
