@@ -6,7 +6,7 @@
   vars:
     splunk_forwarder_url: "https://download.splunk.com/products/universalforwarder/releases/9.1.2/linux/splunkforwarder-9.1.2-b6b9c8185839-linux-2.6-amd64.deb"
     splunk_deb: "/tmp/splunkforwarder.deb"
-    splunk_admin_password: "{{ lookup('env', 'SPLUNK_PASSWORD') }}"
+    splunk_admin_password: "{{ SPLUNK_PASSWORD }}"
     splunk_bin_path: "/opt/splunkforwarder/bin/splunk"
     inputs_conf: "/opt/splunkforwarder/etc/system/local/inputs.conf"
     outputs_conf: "/opt/splunkforwarder/etc/system/local/outputs.conf"
