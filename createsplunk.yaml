@@ -8,6 +8,8 @@
     splunk_install_dir: /opt
     splunk_user: splunk
     splunk_home: "{{ splunk_install_dir }}/splunk"
+    splunk_admin_user: admin
+
   tasks:
 
     - name: Install dependencies
@@ -41,22 +43,34 @@
       register: admin_password
       changed_when: false
 
-    - name: Accept license and set admin password
-      command: >
-        {{ splunk_home }}/bin/splunk start --accept-license --answer-yes
-        --no-prompt --seed-passwd "{{ admin_password.stdout }}"
+    - name: Create user-seed.conf to preset admin credentials
+      copy:
+        dest: "{{ splunk_home }}/etc/system/local/user-seed.conf"
+        content: |
+          [user_info]
+          USERNAME = {{ splunk_admin_user }}
+          PASSWORD = {{ admin_password.stdout }}
+        owner: "{{ splunk_user }}"
+        group: "{{ splunk_user }}"
+        mode: '0600'
+
+    - name: Accept license and start Splunk (first run)
+      command: "{{ splunk_home }}/bin/splunk start --accept-license"
       become_user: "{{ splunk_user }}"
       args:
         creates: "{{ splunk_home }}/ftr"
 
     - name: Enable Splunk to start at boot
-      command: "{{ splunk_home }}/bin/splunk enable boot-start -user {{ splunk_user }}"
+      command: "{{ splunk_home }}/bin/splunk enable boot-start"
       become_user: root
 
-    - name: Start Splunk
+    - name: Start Splunk service
       command: "{{ splunk_home }}/bin/splunk start"
       become_user: "{{ splunk_user }}"
 
-    - name: Print admin password
+    - name: Print Splunk Admin credentials
       debug:
-        msg: "Splunk Admin Passwort: {{ admin_password.stdout }}"
+        msg: |
+          Splunk Admin Zugang:
+            Username: {{ splunk_admin_user }}
+            Passwort: {{ admin_password.stdout }}
