@@ -32,7 +32,7 @@
         name: "{{ splunk_user }}"
         shell: /bin/bash
         create_home: yes
-
+ 
     - name: Download Splunk tarball
       get_url:
         url: "{{ splunk_url }}"
