@@ -8,8 +8,20 @@
     splunk_deb: "/tmp/splunkforwarder.deb"
     splunk_admin_password: "{{ lookup('env', 'SPLUNK_PASSWORD') }}"
 
-  tasks:
+  pre_tasks:
+    - name: Check if Splunk is already installed
+      stat:
+        path: /opt/splunkforwarder/bin/splunk
+      register: splunk_bin
 
+    - name: Check if Splunk is already running
+      command: /opt/splunkforwarder/bin/splunk status
+      register: splunk_status
+      failed_when: false
+      changed_when: false
+      when: splunk_bin.stat.exists
+
+  tasks:
     - name: Ensure wget is installed
       apt:
         name: wget
@@ -20,16 +32,19 @@
       shell: "wget -O {{ splunk_deb }} {{ splunk_forwarder_url }}"
       args:
         creates: "{{ splunk_deb }}"
+      when: not splunk_bin.stat.exists
 
     - name: Install Splunk Universal Forwarder
       apt:
         deb: "{{ splunk_deb }}"
+      when: not splunk_bin.stat.exists
 
     - name: Create splunk user
       user:
         name: splunk
         shell: /bin/bash
         create_home: yes
+      when: not splunk_bin.stat.exists
 
     - name: Accept Splunk license and set admin password
       command: /opt/splunkforwarder/bin/splunk start --accept-license --answer-yes --no-prompt --seed-passwd "{{ splunk_admin_password }}"
@@ -37,9 +52,11 @@
         creates: /opt/splunkforwarder/etc/passwd
       environment:
         SPLUNK_PASSWORD: "{{ splunk_admin_password }}"
+      when: not splunk_status.stdout is defined or "'splunkd is running'" not in splunk_status.stdout
 
     - name: Enable boot-start for splunk user
       command: /opt/splunkforwarder/bin/splunk enable boot-start -user splunk
+      when: not splunk_status.stdout is defined or "'splunkd is running'" not in splunk_status.stdout
 
     - name: Add monitor for all logs in /var/log
       command: /opt/splunkforwarder/bin/splunk add monitor /var/log -auth admin:"{{ splunk_admin_password }}"
@@ -47,6 +64,7 @@
         creates: /opt/splunkforwarder/etc/system/local/inputs.conf
       environment:
         SPLUNK_PASSWORD: "{{ splunk_admin_password }}"
+      when: not splunk_status.stdout is defined or "'splunkd is running'" not in splunk_status.stdout
 
     - name: Configure forward-server
       command: /opt/splunkforwarder/bin/splunk add forward-server 172.16.2.80:9997 -auth admin:"{{ splunk_admin_password }}"
@@ -54,6 +72,8 @@
         creates: /opt/splunkforwarder/etc/system/local/outputs.conf
       environment:
         SPLUNK_PASSWORD: "{{ splunk_admin_password }}"
+      when: not splunk_status.stdout is defined or "'splunkd is running'" not in splunk_status.stdout
 
     - name: Restart Splunk Forwarder
       command: /opt/splunkforwarder/bin/splunk restart
+      when: not splunk_status.stdout is defined or "'splunkd is running'" not in splunk_status.stdout
