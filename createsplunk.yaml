@@ -12,6 +12,16 @@
 
   tasks:
 
+    - name: Check if Splunk is already installed
+      stat:
+        path: "{{ splunk_home }}/bin/splunk"
+      register: splunk_installed
+
+    - name: Abort if Splunk is already installed
+      fail:
+        msg: "Splunk scheint bereits installiert zu sein unter {{ splunk_home }}. Installation wird abgebrochen."
+      when: splunk_installed.stat.exists
+
     - name: Install dependencies
       apt:
         name: [wget, openssl]
@@ -61,7 +71,7 @@
         creates: "{{ splunk_home }}/ftr"
 
     - name: Enable Splunk to start at boot
-      command: "{{ splunk_home }}/bin/splunk enable boot-start --accept-license --answer-yes"
+      command: "{{ splunk_home }}/bin/splunk enable boot-start --accept-license"
       become_user: root
 
     - name: Start Splunk service
