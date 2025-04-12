@@ -1,21 +1,24 @@
 ---
 - name: Install sudo on Debian and Ubuntu systems
-  hosts: all  # Hier kannst du die Gruppe oder Hosts definieren, auf denen du sudo installieren möchtest
-  become: yes  # Wir benötigen hier root-Rechte, um sudo zu installieren
+  hosts: all  # Hier die Gruppe von Hosts angeben
+  become: yes  # Um sudo-Rechte zu verwenden, falls sudo bereits vorhanden ist
   tasks:
     - name: Check if sudo is already installed
       command: which sudo
       register: result
-      ignore_errors: yes  # Falls sudo nicht gefunden wird, fahren wir fort
+      ignore_errors: yes  # Ignoriere Fehler, wenn sudo nicht installiert ist
 
-    - name: Install sudo if it is not already installed
+    - name: Install sudo if it is not already installed (without sudo)
+      # Wenn sudo nicht verfügbar ist, verwenden wir `apt` als root
       apt:
         name: sudo
         state: present
-      when: result.rc != 0  # sudo ist nicht installiert, wenn der Befehl "which sudo" fehlschlägt
+      when: result.rc != 0  # Installiere sudo nur, wenn es nicht bereits vorhanden ist
+      become: false  # Hier stellen wir sicher, dass wir ohne sudo installieren, weil sudo fehlt
 
-    - name: Ensure sudo is installed
+    - name: Ensure sudo is installed (with sudo)
+      # Wenn sudo installiert ist, verwenden wir become für die Installation von sudo
       apt:
         name: sudo
         state: present
-      when: result.rc != 0  # Falls sudo nicht installiert ist, wird es installiert
+      when: result.rc == 0
