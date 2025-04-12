@@ -31,21 +31,22 @@
         dest: "{{ splunk_install_dir }}"
         remote_src: yes
 
-    - name: Accept license and start Splunk Forwarder
-      command: "{{ splunk_home }}/bin/splunk start --accept-license --answer-yes"
+    - name: Create user-seed.conf to preset admin credentials
+      copy:
+        dest: "{{ splunk_home }}/etc/system/local/user-seed.conf"
+        content: |
+          [user_info]
+          USERNAME = {{ splunk_admin_user }}
+          PASSWORD = {{ splunk_admin_password }}
+        mode: '0600'
+
+    - name: Accept license and start Splunk Forwarder (first run)
+      command: "{{ splunk_home }}/bin/splunk start --accept-license"
       args:
         creates: "{{ splunk_home }}/ftr"
 
     - name: Enable Splunk Forwarder to start on boot
       command: "{{ splunk_home }}/bin/splunk enable boot-start"
-
-    - name: Set admin password (if needed)
-      command: >
-        {{ splunk_home }}/bin/splunk edit user {{ splunk_admin_user }}
-        -password '{{ splunk_admin_password }}'
-        -role admin
-        -auth admin:changeme
-      ignore_errors: yes
 
     - name: Add Splunk Server as Forward Target
       command: >
