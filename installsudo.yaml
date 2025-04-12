@@ -1,7 +1,6 @@
 ---
 - name: Install sudo on Debian and Ubuntu systems
   hosts: all  # Hier die Gruppe von Hosts angeben
-  become: yes  # Um sudo-Rechte zu verwenden, falls sudo bereits vorhanden ist
   tasks:
     - name: Check if sudo is already installed
       command: which sudo
@@ -22,3 +21,4 @@
         name: sudo
         state: present
       when: result.rc == 0
+      become: true
