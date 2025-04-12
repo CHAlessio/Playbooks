@@ -1,0 +1,64 @@
+---
+- name: Install and configure Splunk Free
+  hosts: splunk_server
+  become: yes
+  vars:
+    splunk_version: "9.2.0.1"
+    splunk_filename: "splunk-{{ splunk_version }}-d8ae995bf219-Linux-x86_64.tgz"
+    splunk_url: "https://download.splunk.com/products/splunk/releases/{{ splunk_version }}/linux/{{ splunk_filename }}"
+    splunk_install_dir: /opt
+    splunk_user: splunk
+    splunk_home: "{{ splunk_install_dir }}/splunk"
+  tasks:
+
+    - name: Install dependencies
+      apt:
+        name: wget
+        state: present
+        update_cache: yes
+
+    - name: Create splunk user
+      user:
+        name: "{{ splunk_user }}"
+        shell: /bin/bash
+        create_home: yes
+
+    - name: Download Splunk tarball
+      get_url:
+        url: "{{ splunk_url }}"
+        dest: "/tmp/{{ splunk_filename }}"
+        mode: '0644'
+
+    - name: Extract Splunk
+      unarchive:
+        src: "/tmp/{{ splunk_filename }}"
+        dest: "{{ splunk_install_dir }}"
+        remote_src: yes
+        owner: "{{ splunk_user }}"
+        group: "{{ splunk_user }}"
+
+    - name: Generate random admin password
+      community.general.random_password:
+        length: 16
+        special: true
+      register: admin_password
+
+    - name: Accept license and set admin password
+      command: >
+        {{ splunk_home }}/bin/splunk start --accept-license --answer-yes
+        --no-prompt --seed-passwd "{{ admin_password.password }}"
+      become_user: "{{ splunk_user }}"
+      args:
+        creates: "{{ splunk_home }}/ftr"
+
+    - name: Enable Splunk to start at boot
+      command: "{{ splunk_home }}/bin/splunk enable boot-start -user {{ splunk_user }}"
+      become_user: root
+
+    - name: Start Splunk
+      command: "{{ splunk_home }}/bin/splunk start"
+      become_user: "{{ splunk_user }}"
+
+    - name: Print admin password
+      debug:
+        msg: "Splunk Admin Passwort: {{ admin_password.password }}"
