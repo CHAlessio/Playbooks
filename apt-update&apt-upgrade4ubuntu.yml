@@ -1,0 +1,15 @@
+---
+- name: Update Ubuntu system
+  hosts: ubuntu  # Hier wird die Gruppe von Ubuntu-Hosts angegeben, die du in Semaphore hast
+  become: yes  # Verwendet sudo-Rechte für den Update-Befehl
+  tasks:
+    - name: Update apt package cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600  # Caches für eine Stunde (optional, je nach Bedarf)
+        
+    - name: Upgrade all packages
+      apt:
+        upgrade: yes
+        autoremove: yes  # Entfernt nicht mehr benötigte Pakete
+        autoclean: yes   # Bereinigt nicht mehr benötigte Pakete
