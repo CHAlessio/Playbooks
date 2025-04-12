@@ -11,7 +11,7 @@
     splunk_install_dir: /opt
     splunk_home: "{{ splunk_install_dir }}/splunkforwarder"
     splunk_filename: "splunkforwarder-9.4.1-e3bdab203ac8-linux-amd64.tgz"
-    splunk_url: "https://download.splunk.com/products/universalforwarder/releases/9.4.1/linux/splunkforwarder-9.4.1-e3bdab203ac8-linux-amd64.tgz"
+    splunk_url: "https://download.splunk.com/products/universalforwarder/releases/9.4.1/linux/{{ splunk_filename }}"
 
   tasks:
     - name: Ensure password env var is set
@@ -45,8 +45,17 @@
       args:
         creates: "{{ splunk_home }}/ftr"
 
-    - name: Enable Splunk Forwarder to start on boot
-      command: "{{ splunk_home }}/bin/splunk enable boot-start --accept-license -user root"
+    - name: Check if SplunkForwarder systemd unit already exists
+      stat:
+        path: /etc/systemd/system/SplunkForwarder.service
+      register: forwarder_service_file
+
+    - name: Remove existing SplunkForwarder systemd unit if present
+      command: "{{ splunk_home }}/bin/splunk disable boot-start"
+      when: forwarder_service_file.stat.exists
+
+    - name: Enable Splunk Forwarder to start on boot (as root)
+      command: "{{ splunk_home }}/bin/splunk enable boot-start -user root"
 
     - name: Add Splunk Server as Forward Target
       command: >
