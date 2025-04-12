@@ -13,14 +13,7 @@
       stat:
         path: /opt/splunkforwarder/bin/splunk
       register: splunk_bin
-
-    - name: Check if Splunk is already running
-      command: /opt/splunkforwarder/bin/splunk status
-      register: splunk_status
-      failed_when: false
-      changed_when: false
-      when: splunk_bin.stat.exists
-
+      
   tasks:
     - name: Ensure wget is installed
       apt:
