@@ -6,7 +6,7 @@
   vars:
     splunk_forwarder_url: "https://download.splunk.com/products/universalforwarder/releases/9.1.2/linux/splunkforwarder-9.1.2-b6b9c8185839-linux-2.6-amd64.deb"
     splunk_deb: "/tmp/splunkforwarder.deb"
-    splunk_admin_password: "{{ lookup('env', 'SPLUNK_PASSWORD') }}" # optional override
+    splunk_admin_password: "{{ lookup('env', 'SPLUNK_PASSWORD') }}"
 
   tasks:
 
@@ -25,23 +25,35 @@
       apt:
         deb: "{{ splunk_deb }}"
 
+    - name: Create splunk user
+      user:
+        name: splunk
+        shell: /bin/bash
+        create_home: yes
+
     - name: Accept Splunk license and set admin password
       command: /opt/splunkforwarder/bin/splunk start --accept-license --answer-yes --no-prompt --seed-passwd "{{ splunk_admin_password }}"
       args:
         creates: /opt/splunkforwarder/etc/passwd
+      environment:
+        SPLUNK_PASSWORD: "{{ splunk_admin_password }}"
 
-    - name: Enable boot-start
+    - name: Enable boot-start for splunk user
       command: /opt/splunkforwarder/bin/splunk enable boot-start -user splunk
 
     - name: Add monitor for all logs in /var/log
       command: /opt/splunkforwarder/bin/splunk add monitor /var/log -auth admin:"{{ splunk_admin_password }}"
       args:
         creates: /opt/splunkforwarder/etc/system/local/inputs.conf
+      environment:
+        SPLUNK_PASSWORD: "{{ splunk_admin_password }}"
 
     - name: Configure forward-server
       command: /opt/splunkforwarder/bin/splunk add forward-server 172.16.2.80:9997 -auth admin:"{{ splunk_admin_password }}"
       args:
         creates: /opt/splunkforwarder/etc/system/local/outputs.conf
+      environment:
+        SPLUNK_PASSWORD: "{{ splunk_admin_password }}"
 
     - name: Restart Splunk Forwarder
       command: /opt/splunkforwarder/bin/splunk restart
