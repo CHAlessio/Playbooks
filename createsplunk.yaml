@@ -9,11 +9,12 @@
     splunk_install_dir: /opt
     splunk_user: splunk
     splunk_home: "{{ splunk_install_dir }}/splunk"
+
   tasks:
 
     - name: Install dependencies
       apt:
-        name: wget
+        name: [wget, openssl]
         state: present
         update_cache: yes
 
@@ -37,16 +38,15 @@
         owner: "{{ splunk_user }}"
         group: "{{ splunk_user }}"
 
-    - name: Generate random admin password
-      community.general.random_password:
-        length: 16
-        special: true
+    - name: Generate random admin password using openssl
+      shell: "openssl rand -base64 16"
       register: admin_password
+      changed_when: false
 
     - name: Accept license and set admin password
       command: >
         {{ splunk_home }}/bin/splunk start --accept-license --answer-yes
-        --no-prompt --seed-passwd "{{ admin_password.password }}"
+        --no-prompt --seed-passwd "{{ admin_password.stdout }}"
       become_user: "{{ splunk_user }}"
       args:
         creates: "{{ splunk_home }}/ftr"
@@ -61,4 +61,4 @@
 
     - name: Print admin password
       debug:
-        msg: "Splunk Admin Passwort: {{ admin_password.password }}"
+        msg: "Splunk Admin Passwort: {{ admin_password.stdout }}"
