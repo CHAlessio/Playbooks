@@ -15,10 +15,3 @@
       when: result.rc != 0  # Installiere sudo nur, wenn es nicht bereits vorhanden ist
       become: false  # Hier stellen wir sicher, dass wir ohne sudo installieren, weil sudo fehlt
 
-    - name: Ensure sudo is installed (with sudo)
-      # Wenn sudo installiert ist, verwenden wir become für die Installation von sudo
-      apt:
-        name: sudo
-        state: present
-      when: result.rc == 0
-      become: true
