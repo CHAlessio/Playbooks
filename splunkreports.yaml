@@ -1,5 +1,5 @@
 ---
-- name: Install and configure Splunk Universal Forwarder on Debian/Ubuntu
+- name: Clean, install and configure Splunk Universal Forwarder on Debian/Ubuntu
   hosts: all
   become: true
 
@@ -14,6 +14,31 @@
     outputs_conf: "/opt/splunkforwarder/etc/system/local/outputs.conf"
 
   pre_tasks:
+    - name: Stop Splunk Forwarder if running
+      shell: /opt/splunkforwarder/bin/splunk stop
+      args:
+        warn: false
+      ignore_errors: true
+
+    - name: Remove Splunk Forwarder via apt if installed
+      apt:
+        name: splunkforwarder
+        state: absent
+        purge: true
+      ignore_errors: true
+
+    - name: Remove Splunk Forwarder files
+      file:
+        path: /opt/splunkforwarder
+        state: absent
+
+    - name: Remove splunk user if it exists
+      user:
+        name: splunk
+        state: absent
+        remove: yes
+      ignore_errors: true
+
     - name: Check if Splunk is installed (via version file)
       stat:
         path: "{{ splunk_version_file }}"
@@ -45,13 +70,11 @@
       shell: "wget -O {{ splunk_deb }} {{ splunk_forwarder_url }}"
       args:
         creates: "{{ splunk_deb }}"
-      when: not splunk_installed.stat.exists
 
-    - name: Install or re-install Splunk Forwarder if needed
+    - name: Install Splunk Forwarder
       apt:
         deb: "{{ splunk_deb }}"
         force: yes
-      when: not splunk_installed.stat.exists and splunk_deb_file.stat.exists
 
     - name: Recheck if Splunk is now installed
       stat:
@@ -85,7 +108,7 @@
       command: "{{ splunk_bin_path }} start --accept-license --answer-yes --no-prompt --seed-passwd '{{ splunk_admin_password }}'"
       args:
         creates: /opt/splunkforwarder/etc/passwd
-      when: splunk_running.rc != 0 and splunk_bin.stat.exists
+      when: splunk_bin.stat.exists
       register: splunk_start_result
 
     - name: Debug splunk start result
