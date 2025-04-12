@@ -30,6 +30,11 @@
       fail:
         msg: "The SPLUNK_PASSWORD variable must be set as a secret or environment variable!"
       when: splunk_admin_password | length == 0
+    
+    - name: FAIL if SPLUNK_PASSWORD is not set
+      fail:
+        msg: "SPLUNK_PASSWORD is EMPTY. Please set it via Vault or Survey."
+      when: splunk_admin_password | length == 0
 
   tasks:
     - name: Ensure wget is installed
