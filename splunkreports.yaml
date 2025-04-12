@@ -46,6 +46,11 @@
         deb: "{{ splunk_deb }}"
       when: not splunk_bin.stat.exists
 
+    - name: Recheck Splunk binary after install
+      stat:
+        path: "{{ splunk_bin_path }}"
+      register: splunk_bin
+
     - name: Create splunk user
       user:
         name: splunk
@@ -53,21 +58,32 @@
         create_home: yes
       when: not splunk_bin.stat.exists
 
+    - name: Check if Splunk is already running
+      shell: pgrep -f splunkd
+      register: splunk_running
+      ignore_errors: true
+      changed_when: false
+
     - name: Stop running Splunk instance (avoid port conflict)
       shell: "{{ splunk_bin_path }} stop"
+      when: splunk_running.rc == 0
       ignore_errors: true
-      when: splunk_bin.stat.exists
 
     - name: Disable legacy init.d boot-start if present
       command: "{{ splunk_bin_path }} disable boot-start"
+      when: splunk_running.rc == 0
       ignore_errors: true
-      when: splunk_bin.stat.exists
 
     - name: Accept Splunk license and set admin password
       command: "{{ splunk_bin_path }} start --accept-license --answer-yes --no-prompt --seed-passwd '{{ splunk_admin_password }}'"
       args:
         creates: /opt/splunkforwarder/etc/passwd
-      no_log: false
+      when: splunk_running.rc != 0
+      register: splunk_start_result
+
+    - name: Debug splunk start result
+      debug:
+        var: splunk_start_result
 
     - name: Enable boot-start for splunk user
       command: "{{ splunk_bin_path }} enable boot-start -user splunk"
@@ -75,12 +91,10 @@
 
     - name: Add monitor for all logs in /var/log
       command: "{{ splunk_bin_path }} add monitor /var/log -auth '{{ splunk_admin_user }}:{{ splunk_admin_password }}'"
-      no_log: true
       when: not splunk_inputs_conf.stat.exists
 
     - name: Configure forward-server
       command: "{{ splunk_bin_path }} add forward-server 172.16.2.80:9997 -auth '{{ splunk_admin_user }}:{{ splunk_admin_password }}'"
-      no_log: true
       when: not splunk_outputs_conf.stat.exists
 
     - name: Restart Splunk Forwarder via systemd
