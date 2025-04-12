@@ -10,8 +10,8 @@
     splunk_admin_password: "{{ lookup('env', 'SPLUNK_PASSWORD') }}"
     splunk_install_dir: /opt
     splunk_home: "{{ splunk_install_dir }}/splunkforwarder"
-    splunk_filename: "splunkforwarder-{{ forwarder_version }}-{{ forwarder_build }}-Linux-x86_64.tgz"
-    splunk_url: "https://download.splunk.com/products/universalforwarder/releases/{{ forwarder_version }}/linux/{{ splunk_filename }}"
+    splunk_filename: "splunkforwarder-9.4.1-e3bdab203ac8-linux-amd64.tgz"
+    splunk_url: "https://download.splunk.com/products/universalforwarder/releases/9.4.1/linux/splunkforwarder-9.4.1-e3bdab203ac8-linux-amd64.tgz"
 
   tasks:
     - name: Ensure password env var is set
