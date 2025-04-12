@@ -76,6 +76,9 @@
         SPLUNK_PASSWORD: "{{ splunk_admin_password }}"
       when: not splunk_outputs_conf.stat.exists
 
-    - name: Restart Splunk Forwarder
-      command: "{{ splunk_bin_path }} restart"
+    - name: Restart Splunk Forwarder via systemd
+      systemd:
+        name: SplunkForwarder
+        state: restarted
+        enabled: true
       when: splunk_bin.stat.exists
