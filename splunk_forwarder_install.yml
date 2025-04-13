@@ -19,17 +19,29 @@
         msg: "Environment variable SPLUNK_PASSWORD is not set!"
       when: splunk_admin_password == ""
 
+    - name: Check if Splunk Forwarder is already installed
+      stat:
+        path: "{{ splunk_home }}/bin/splunk"
+      register: splunk_forwarder_installed
+
+    - name: Skip installation if Splunk Forwarder is already installed
+      debug:
+        msg: "Splunk Forwarder is already installed. Skipping installation."
+      when: splunk_forwarder_installed.stat.exists
+
     - name: Download Splunk Forwarder
       get_url:
         url: "{{ splunk_url }}"
         dest: "/tmp/{{ splunk_filename }}"
         mode: '0644'
+      when: not splunk_forwarder_installed.stat.exists
 
     - name: Extract Splunk Forwarder
       unarchive:
         src: "/tmp/{{ splunk_filename }}"
         dest: "{{ splunk_install_dir }}"
         remote_src: yes
+      when: not splunk_forwarder_installed.stat.exists
 
     - name: Create user-seed.conf to preset admin credentials
       copy:
@@ -39,11 +51,13 @@
           USERNAME = {{ splunk_admin_user }}
           PASSWORD = {{ splunk_admin_password }}
         mode: '0600'
+      when: not splunk_forwarder_installed.stat.exists
 
     - name: Accept license and start Splunk Forwarder (first run)
       command: "{{ splunk_home }}/bin/splunk start --accept-license"
       args:
         creates: "{{ splunk_home }}/ftr"
+      when: not splunk_forwarder_installed.stat.exists
 
     - name: Check if SplunkForwarder systemd unit already exists
       stat:
@@ -56,17 +70,21 @@
 
     - name: Enable Splunk Forwarder to start on boot (as root)
       command: "{{ splunk_home }}/bin/splunk enable boot-start --accept-license -user root"
+      when: not splunk_forwarder_installed.stat.exists
 
     - name: Add Splunk Server as Forward Target
       command: >
         {{ splunk_home }}/bin/splunk add forward-server {{ splunk_server_ip }}:{{ splunk_server_port }}
         -auth {{ splunk_admin_user }}:{{ splunk_admin_password }}
+      when: not splunk_forwarder_installed.stat.exists
 
     - name: Monitor system logs
       command: >
         {{ splunk_home }}/bin/splunk add monitor /var/log
         -index debian_logs
         -auth {{ splunk_admin_user }}:{{ splunk_admin_password }}
+      when: not splunk_forwarder_installed.stat.exists
 
     - name: Restart Splunk Forwarder
       command: "{{ splunk_home }}/bin/splunk restart"
+      when: not splunk_forwarder_installed.stat.exists
