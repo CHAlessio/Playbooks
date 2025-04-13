@@ -29,6 +29,10 @@
         msg: "Splunk Forwarder is already installed. Skipping installation."
       when: splunk_forwarder_installed.stat.exists
 
+    - name: Stop Splunk Forwarder if running
+      command: "{{ splunk_home }}/bin/splunk stop"
+      when: splunk_forwarder_installed.stat.exists
+
     - name: Download Splunk Forwarder
       get_url:
         url: "{{ splunk_url }}"
