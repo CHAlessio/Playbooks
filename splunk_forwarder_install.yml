@@ -121,4 +121,10 @@
         enabled: yes
         state: started
         daemon_reload: yes
+    
+    - name: Start Splunk Forwarder fallback (CLI)
+      command: /opt/splunkforwarder/bin/splunk start
+      register: cli_start
+      failed_when: cli_start.rc != 0 and "'splunkd is already running'" not in cli_start.stdout
+
 
