@@ -51,7 +51,6 @@
         creates: "{{ splunk_download_path }}"
       when: not splunk_forwarder_installed.stat.exists and (download_result is failed or download_result.failed)
 
-
     - name: Check if the tarball exists
       stat:
         path: "{{ splunk_download_path }}"
@@ -89,10 +88,12 @@
       command: "{{ splunk_home }}/bin/splunk enable boot-start --accept-license -user root"
       when: not splunk_forwarder_installed.stat.exists
 
-    - name: Ensure Splunk Forwarder service is enabled
+    - name: Ensure SplunkForwarder systemd service is enabled
       systemd:
         name: SplunkForwarder
         enabled: yes
+        state: started
+        daemon_reload: yes
 
     - name: Add Splunk Indexer as forward target
       command: >
@@ -106,8 +107,3 @@
         -index {{ log_index }}
         -auth {{ splunk_admin_user }}:{{ splunk_admin_password }}
       when: not splunk_forwarder_installed.stat.exists
-
-    - name: Ensure Splunk Forwarder service is started
-      systemd:
-        name: SplunkForwarder
-        state: started
