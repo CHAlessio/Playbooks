@@ -1,6 +1,8 @@
+---
 - name: Install and configure Splunk Universal Forwarder
   hosts: agents
   become: yes
+
   vars:
     forwarder_version: "9.4.1"
     forwarder_build: "e3bdab203ac8"
@@ -10,8 +12,9 @@
     splunk_admin_password: "{{ lookup('env', 'SPLUNK_PASSWORD') }}"
     splunk_install_dir: /opt
     splunk_home: "{{ splunk_install_dir }}/splunkforwarder"
-    splunk_filename: "splunkforwarder-9.4.1-e3bdab203ac8-linux-amd64.tgz"
-    splunk_url: "https://download.splunk.com/products/universalforwarder/releases/9.4.1/linux/{{ splunk_filename }}"
+    splunk_filename: "splunkforwarder-{{ forwarder_version }}-{{ forwarder_build }}-linux-amd64.tgz"
+    splunk_url: "https://download.splunk.com/products/universalforwarder/releases/{{ forwarder_version }}/linux/{{ splunk_filename }}"
+    log_index: "debian_logs"
 
   tasks:
     - name: Ensure password env var is set
@@ -33,12 +36,22 @@
       command: "{{ splunk_home }}/bin/splunk stop"
       when: splunk_forwarder_installed.stat.exists
 
-    - name: Download Splunk Forwarder
+    - name: Download Splunk Forwarder (preferred method)
       get_url:
         url: "{{ splunk_url }}"
         dest: "/tmp/{{ splunk_filename }}"
         mode: '0644'
+        validate_certs: no
+      register: download_result
+      failed_when: false
       when: not splunk_forwarder_installed.stat.exists
+
+    - name: Download Splunk Forwarder (fallback via curl)
+      shell: |
+        curl -fSL "{{ splunk_url }}" -o "/tmp/{{ splunk_filename }}"
+      args:
+        creates: "/tmp/{{ splunk_filename }}"
+      when: not splunk_forwarder_installed.stat.exists and (download_result is failed or download_result.failed)
 
     - name: Extract Splunk Forwarder
       unarchive:
@@ -85,7 +98,7 @@
     - name: Monitor system logs
       command: >
         {{ splunk_home }}/bin/splunk add monitor /var/log
-        -index debian_logs
+        -index {{ log_index }}
         -auth {{ splunk_admin_user }}:{{ splunk_admin_password }}
       when: not splunk_forwarder_installed.stat.exists
 
