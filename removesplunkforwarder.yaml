@@ -1,6 +1,6 @@
 ---
 - name: Splunk Universal Forwarder entfernen
-  hosts: splunk_forwarders
+  hosts: all
   become: yes
   tasks:
 
