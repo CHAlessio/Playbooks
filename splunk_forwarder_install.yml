@@ -29,11 +29,6 @@
         path: "{{ splunk_home }}/bin/splunk"
       register: splunk_forwarder_installed
 
-    - name: Skip installation if Splunk Forwarder is already installed
-      debug:
-        msg: "Splunk Forwarder is already installed. Skipping installation."
-      when: splunk_forwarder_installed.stat.exists
-
     - name: Try to download Splunk Forwarder (preferred method)
       get_url:
         url: "{{ splunk_url }}"
@@ -45,12 +40,10 @@
       when: not splunk_forwarder_installed.stat.exists
 
     - name: Fallback - Download Splunk Forwarder via curl if get_url failed
-      block:
-        - name: Run curl to download
-          shell: "curl -fSL '{{ splunk_url }}' -o '{{ splunk_download_path }}'"
-          args:
-            creates: "{{ splunk_download_path }}"
-      when: not splunk_forwarder_installed.stat.exists and (download_result is failed or download_result.failed)
+      shell: "curl -fSL '{{ splunk_url }}' -o '{{ splunk_download_path }}'"
+      args:
+        creates: "{{ splunk_download_path }}"
+      when: not splunk_forwarder_installed.stat.exists and (download_result.failed | default(false))
 
     - name: Check if the tarball exists
       stat:
@@ -85,9 +78,17 @@
         creates: "{{ splunk_home }}/ftr"
       when: not splunk_forwarder_installed.stat.exists
 
+    - name: Check if SplunkForwarder systemd unit file exists
+      stat:
+        path: /etc/systemd/system/SplunkForwarder.service
+      register: unit_file_check
+
+    - name: Disable existing boot-start if systemd unit already exists
+      command: "{{ splunk_home }}/bin/splunk disable boot-start"
+      when: unit_file_check.stat.exists
+
     - name: Enable Splunk boot-start via systemd (as root)
       command: "{{ splunk_home }}/bin/splunk enable boot-start --accept-license -user root"
-      when: not splunk_forwarder_installed.stat.exists
 
     - name: Ensure SplunkForwarder systemd service is enabled and started
       systemd:
