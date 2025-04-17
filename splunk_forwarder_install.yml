@@ -109,3 +109,16 @@
         -index {{ log_index }}
         -auth {{ splunk_admin_user }}:{{ splunk_admin_password }}
       when: not splunk_forwarder_installed.stat.exists
+      
+    - name: Start Splunk Forwarder once explicitly via CLI
+      command: sudo /opt/splunkforwarder/bin/splunk start
+      register: start_result
+      failed_when: start_result.rc != 0 and "'splunkd is already running'" not in start_result.stdout
+
+    - name: Ensure SplunkForwarder systemd service is enabled and started
+      systemd:
+        name: SplunkForwarder
+        enabled: yes
+        state: started
+        daemon_reload: yes
+
