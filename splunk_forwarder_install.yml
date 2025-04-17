@@ -13,10 +13,12 @@
     splunk_install_dir: /opt
     splunk_home: "{{ splunk_install_dir }}/splunkforwarder"
     splunk_filename: "splunkforwarder-{{ forwarder_version }}-{{ forwarder_build }}-linux-amd64.tgz"
+    splunk_download_path: "/tmp/{{ splunk_filename }}"
     splunk_url: "https://download.splunk.com/products/universalforwarder/releases/{{ forwarder_version }}/linux/{{ splunk_filename }}"
     log_index: "debian_logs"
 
   tasks:
+
     - name: Ensure password env var is set
       fail:
         msg: "Environment variable SPLUNK_PASSWORD is not set!"
@@ -32,30 +34,35 @@
         msg: "Splunk Forwarder is already installed. Skipping installation."
       when: splunk_forwarder_installed.stat.exists
 
-    - name: Stop Splunk Forwarder if running
-      command: "{{ splunk_home }}/bin/splunk stop"
-      when: splunk_forwarder_installed.stat.exists
-
-    - name: Download Splunk Forwarder (preferred method)
+    - name: Try to download Splunk Forwarder (preferred method)
       get_url:
         url: "{{ splunk_url }}"
-        dest: "/tmp/{{ splunk_filename }}"
+        dest: "{{ splunk_download_path }}"
         mode: '0644'
         validate_certs: no
       register: download_result
       failed_when: false
       when: not splunk_forwarder_installed.stat.exists
 
-    - name: Download Splunk Forwarder (fallback via curl)
-      shell: |
-        curl -fSL "{{ splunk_url }}" -o "/tmp/{{ splunk_filename }}"
+    - name: Fallback: Download Splunk Forwarder via curl if get_url failed
+      shell: curl -fSL "{{ splunk_url }}" -o "{{ splunk_download_path }}"
       args:
-        creates: "/tmp/{{ splunk_filename }}"
+        creates: "{{ splunk_download_path }}"
       when: not splunk_forwarder_installed.stat.exists and (download_result is failed or download_result.failed)
+
+    - name: Check if the tarball exists
+      stat:
+        path: "{{ splunk_download_path }}"
+      register: splunk_tgz
+
+    - name: Fail if Splunk tarball is still missing
+      fail:
+        msg: "Download failed: Splunk Forwarder archive not found at {{ splunk_download_path }}"
+      when: not splunk_tgz.stat.exists
 
     - name: Extract Splunk Forwarder
       unarchive:
-        src: "/tmp/{{ splunk_filename }}"
+        src: "{{ splunk_download_path }}"
         dest: "{{ splunk_install_dir }}"
         remote_src: yes
       when: not splunk_forwarder_installed.stat.exists
@@ -70,26 +77,22 @@
         mode: '0600'
       when: not splunk_forwarder_installed.stat.exists
 
-    - name: Accept license and start Splunk Forwarder (first run)
+    - name: Accept license and do first start
       command: "{{ splunk_home }}/bin/splunk start --accept-license"
       args:
         creates: "{{ splunk_home }}/ftr"
       when: not splunk_forwarder_installed.stat.exists
 
-    - name: Check if SplunkForwarder systemd unit already exists
-      stat:
-        path: /etc/systemd/system/SplunkForwarder.service
-      register: forwarder_service_file
-
-    - name: Remove existing SplunkForwarder systemd unit if present
-      command: "{{ splunk_home }}/bin/splunk disable boot-start"
-      when: forwarder_service_file.stat.exists
-
-    - name: Enable Splunk Forwarder to start on boot (as root)
+    - name: Enable Splunk boot-start via systemd (as root)
       command: "{{ splunk_home }}/bin/splunk enable boot-start --accept-license -user root"
       when: not splunk_forwarder_installed.stat.exists
 
-    - name: Add Splunk Server as Forward Target
+    - name: Ensure Splunk Forwarder service is enabled
+      systemd:
+        name: SplunkForwarder
+        enabled: yes
+
+    - name: Add Splunk Indexer as forward target
       command: >
         {{ splunk_home }}/bin/splunk add forward-server {{ splunk_server_ip }}:{{ splunk_server_port }}
         -auth {{ splunk_admin_user }}:{{ splunk_admin_password }}
@@ -102,6 +105,7 @@
         -auth {{ splunk_admin_user }}:{{ splunk_admin_password }}
       when: not splunk_forwarder_installed.stat.exists
 
-    - name: Restart Splunk Forwarder
-      command: "{{ splunk_home }}/bin/splunk restart"
-      when: not splunk_forwarder_installed.stat.exists
+    - name: Ensure Splunk Forwarder service is started
+      systemd:
+        name: SplunkForwarder
+        state: started
