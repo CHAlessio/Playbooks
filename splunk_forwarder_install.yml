@@ -44,11 +44,12 @@
       failed_when: false
       when: not splunk_forwarder_installed.stat.exists
 
-    - name: Fallback: Download Splunk Forwarder via curl if get_url failed
-      shell: >
-        curl -fSL "{{ splunk_url }}" -o "{{ splunk_download_path }}"
-      args:
-        creates: "{{ splunk_download_path }}"
+    - name: Fallback - Download Splunk Forwarder via curl if get_url failed
+      block:
+        - name: Run curl to download
+          shell: "curl -fSL '{{ splunk_url }}' -o '{{ splunk_download_path }}'"
+          args:
+            creates: "{{ splunk_download_path }}"
       when: not splunk_forwarder_installed.stat.exists and (download_result is failed or download_result.failed)
 
     - name: Check if the tarball exists
@@ -88,7 +89,7 @@
       command: "{{ splunk_home }}/bin/splunk enable boot-start --accept-license -user root"
       when: not splunk_forwarder_installed.stat.exists
 
-    - name: Ensure SplunkForwarder systemd service is enabled
+    - name: Ensure SplunkForwarder systemd service is enabled and started
       systemd:
         name: SplunkForwarder
         enabled: yes
