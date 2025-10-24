@@ -1,6 +1,6 @@
 ---
 - name: Update and upgrade Ubuntu system
-  hosts: ubuntu  # Hosts-Gruppe für Ubuntu, die du in Semaphore hast
+  hosts: all  # Hosts-Gruppe für Ubuntu, die du in Semaphore hast
   become: yes     # Erforderlich, um sudo-Rechte zu verwenden
   tasks:
 
